@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>LLM Assistant</title>
+</head>
+<body>
+<h3>LLM Assistant</h3>
+
+<textarea id="input" rows="4" cols="50"></textarea><br/>
+<button onclick="send()">Send</button>
+
+<pre id="output"></pre>
+
+<script>
+    function send() {
+        fetch("/api/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message: input.value })
+        })
+            .then(r => r.json())
+            .then(d => output.textContent = d.response);
+    }
+</script>
+
+</body>
+</html>

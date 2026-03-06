@@ -1,12 +1,12 @@
 package org.example.canvaslearningassistant.services;
 
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.example.canvaslearningassistant.dto.GraphEdgeDto;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -20,7 +20,7 @@ public class KnowledgeGraphApiService {
     /**
      * Sends user text to the FastAPI knowledge graph API and returns JSON response as String
      */
-    public String ask(String userMessage) {
+    public List<GraphEdgeDto> ask(String userMessage) {
 
         // Build request body
         Map<String, Object> requestBody = Map.of(
@@ -34,9 +34,15 @@ public class KnowledgeGraphApiService {
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
 
         // POST request
-        ResponseEntity<String> response = restTemplate.postForEntity(API_URL, entity, String.class);
+        ResponseEntity<List<GraphEdgeDto>> response =
+                restTemplate.exchange(
+                        API_URL,
+                        HttpMethod.POST,
+                        entity,
+                        new ParameterizedTypeReference<>() {
+                        }
+                );
 
-        // Return JSON response as String
         return response.getBody();
     }
 }

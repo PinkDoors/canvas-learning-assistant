@@ -2,17 +2,26 @@ package org.example.canvaslearningassistant.controllers;
 
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
+import org.example.canvaslearningassistant.dto.GraphEdgeDto;
+import org.example.canvaslearningassistant.services.KnowledgeGraphApiService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.ModelAndView;
 
 import java.nio.charset.StandardCharsets;
 import java.text.ParseException;
+import java.util.List;
 import java.util.Map;
 
 @RestController
 @RequestMapping("/lti")
 public class LtiController {
+
+    private final KnowledgeGraphApiService knowledgeGraphApiService;
+
+    public LtiController(KnowledgeGraphApiService knowledgeGraphApiService) {
+        this.knowledgeGraphApiService = knowledgeGraphApiService;
+    }
 
     @PostMapping("/login")
     public ResponseEntity<Void> login(@RequestParam Map<String,String> params) {
@@ -78,6 +87,10 @@ public class LtiController {
         ModelAndView mav = new ModelAndView("chat");
         mav.addObject("userId", userId);
         mav.addObject("courseId", courseId);
+
+        List<GraphEdgeDto> graph = knowledgeGraphApiService.ask("course introduction");
+        mav.addObject("graph", graph);
+
         return mav;
     }
 }

@@ -1,4 +1,4 @@
-package org.example.canvaslearningassistant.services;
+package org.example.canvaslearningassistant.services.api;
 
 import org.example.canvaslearningassistant.dto.GraphEdgeDto;
 import org.springframework.core.ParameterizedTypeReference;
@@ -12,15 +12,14 @@ import java.util.Map;
 @Service
 public class KnowledgeGraphApiService {
 
-    // FastAPI endpoint inside Docker
-    private static final String API_URL = "http://localhost:8000/generate_graph";
-
     private final RestTemplate restTemplate = new RestTemplate();
 
-    /**
-     * Sends user text to the FastAPI knowledge graph API and returns JSON response as String
-     */
     public List<GraphEdgeDto> ask(String userMessage) {
+        throw new UnsupportedOperationException("Communication is not yet implemented");
+    }
+
+    public List<GraphEdgeDto> generateKnowledgeGraph(String userMessage) {
+        final String API_URL = "http://host.docker.internal:8000/generate_graph";
 
         // Build request body
         Map<String, Object> requestBody = Map.of(

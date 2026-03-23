@@ -1,0 +1,34 @@
+version: "3.9"
+
+services:
+
+  postgres:
+    image: postgres:16
+    container_name: lti-postgres
+    restart: always
+    environment:
+      POSTGRES_DB: lti_db
+      POSTGRES_USER: lti_user
+      POSTGRES_PASSWORD: lti_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  lti-app:
+    build: .
+    container_name: canvas-learning-assistant
+    restart: always
+    depends_on:
+      - postgres
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/lti_db
+      SPRING_DATASOURCE_USERNAME: lti_user
+      SPRING_DATASOURCE_PASSWORD: lti_password
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_PROFILES_ACTIVE: docker
+
+volumes:
+  postgres_data:

@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+
+        #graphContainer {
+            height: 600px;
+            border: 1px solid #ccc;
+        }
+    </style>
+</head>
+<body>
+
+<h3>Course Knowledge Graph</h3>
+<div id="graphContainer"></div>
+
+<script th:inline="javascript">
+
+    const graph = /*[[${graph}]]*/ [];
+
+    const nodeMap = new Map();
+    const nodes = [];
+    const edges = [];
+
+    function getNodeId(label) {
+        if (!nodeMap.has(label)) {
+            const id = nodeMap.size + 1;
+            nodeMap.set(label, id);
+
+            nodes.push({
+                id: id,
+                label: label,
+                shape: "dot",
+                size: 20,
+                font: { multi: "html", size: 16, face: "Arial" }
+            });
+        }
+        return nodeMap.get(label);
+    }
+
+    graph.forEach(rel => {
+        const fromId = getNodeId(rel.firstNode);
+        const toId = getNodeId(rel.secondNode);
+
+        edges.push({
+            from: fromId,
+            to: toId,
+            label: "",             // hide edge labels by default
+            edgeLabelText: rel.edge, // store real label in custom field
+            arrows: "to",
+            font: { align: "horizontal" } // make edge label horizontal
+        });
+    });
+
+    const container = document.getElementById("graphContainer");
+
+    const data = {
+        nodes: new vis.DataSet(nodes),
+        edges: new vis.DataSet(edges)
+    };
+
+    const options = {
+        layout: {
+            hierarchical: {
+                enabled: true,
+                levelSeparation: 120,  // vertical spacing between levels
+                nodeSpacing: 100,      // horizontal spacing between nodes on the same level
+                treeSpacing: 200,
+                direction: "UD",       // Top-down vertical layout
+                sortMethod: "directed"
+            }
+        },
+        edges: {
+            smooth: { enabled: false }, // optional: smoother vertical edges
+            font: { align: "horizontal" }    // horizontal edge labels
+        },
+        physics: {
+            enabled: false // turn off physics for hierarchical layout
+        },
+        nodes: {
+            shape: "dot",
+            size: 20,
+            font: { multi: "html", size: 16, face: "Arial" }
+        }
+    };
+
+    const network = new vis.Network(container, data, options);
+
+    // Show edge label when clicked
+    network.on("selectEdge", function(params) {
+        const edgesDS = data.edges;
+        const edgeId = params.edges[0];
+        const edge = edgesDS.get(edgeId);
+        edgesDS.update({ id: edgeId, label: edge.edgeLabelText });
+    });
+
+    // Optional: hide label again when deselecting
+    network.on("deselectEdge", function(params) {
+        const edgesDS = data.edges;
+        params.previousSelection.edges.forEach(edgeId => {
+            edgesDS.update({ id: edgeId, label: "" });
+        });
+    });
+
+</script>
+
+</body>
+</html>

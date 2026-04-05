@@ -17,6 +17,45 @@
 <body>
 
 <h3>Course Knowledge Graph</h3>
+
+<form th:action="@{/lti/generate-quiz}" method="post">
+    <!-- Pass LTI parameters if needed -->
+    <input type="hidden" name="course_id" th:value="${course_id}" />
+    <input type="hidden" name="user_id" th:value="${user_id}" />
+    <input type="hidden" name="access_token" th:value="${access_token}" />
+
+    <button type="submit" style="
+        margin-bottom: 15px;
+        padding: 10px 16px;
+        font-size: 14px;
+        background-color: #2c7be5;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;">
+        Update my knowledge
+    </button>
+</form>
+
+<form th:action="@{/lti/sync-results}" method="post">
+    <input type="hidden" name="course_id" th:value="${course_id}" />
+    <input type="hidden" name="user_id" th:value="${user_id}" />
+    <input type="hidden" name="access_token" th:value="${access_token}" />
+
+    <button type="submit" style="
+        margin-bottom: 15px;
+        margin-left: 10px;
+        padding: 10px 16px;
+        font-size: 14px;
+        background-color: #28a745;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;">
+        Check my quizzes
+    </button>
+</form>
+
 <div id="graphContainer"></div>
 
 <script th:inline="javascript">

@@ -7,9 +7,9 @@ import lombok.Data;
 public class GraphEdgeDto {
 
     @JsonProperty("node_1")
-    private String firstNode;
+    private final String firstNode;
 
     @JsonProperty("node_2")
-    private String secondNode;
-    private String edge;
+    private final String secondNode;
+    private final String edge;
 }

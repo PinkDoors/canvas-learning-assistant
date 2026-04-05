@@ -1,5 +1,7 @@
 package org.example.canvaslearningassistant.services.api;
 
+import lombok.RequiredArgsConstructor;
+import org.example.canvaslearningassistant.configuration.CanvasLearningAssistantConfiguration;
 import org.example.canvaslearningassistant.dto.GraphEdgeDto;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
@@ -10,16 +12,18 @@ import java.util.List;
 import java.util.Map;
 
 @Service
+@RequiredArgsConstructor
 public class KnowledgeGraphApiService {
 
     private final RestTemplate restTemplate = new RestTemplate();
+    private final CanvasLearningAssistantConfiguration canvasLearningAssistantConfiguration;
 
     public List<GraphEdgeDto> ask(String userMessage) {
         throw new UnsupportedOperationException("Communication is not yet implemented");
     }
 
     public List<GraphEdgeDto> generateKnowledgeGraph(String userMessage) {
-        final String API_URL = "http://host.docker.internal:8000/generate_graph";
+        final String API_URL = canvasLearningAssistantConfiguration.getQuizApiHost() + "/generate_graph";
 
         // Build request body
         Map<String, Object> requestBody = Map.of(

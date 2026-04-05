@@ -1,6 +1,6 @@
 package org.example.canvaslearningassistant.repository;
 
-import org.example.canvaslearningassistant.entities.GraphEdge;
+import org.example.canvaslearningassistant.entity.GraphEdge;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

@@ -20,4 +20,17 @@ public class IdTokenClaimsUtils {
 
         return Optional.empty();
     }
+
+    public static Optional<Integer> getUserId(String idToken) throws ParseException {
+        SignedJWT signedJWT = SignedJWT.parse(idToken);
+        JWTClaimsSet claims = signedJWT.getJWTClaimsSet();
+
+        Map<String, Object> ltiClaims = claims.getClaims();
+        Object contextObj = ltiClaims.get("https://purl.imsglobal.org/spec/lti/claim/custom");
+        if (contextObj instanceof Map<?, ?> contextMap) {
+            return Optional.of(Integer.parseInt((String)contextMap.get("canvas_user_id")));
+        }
+
+        return Optional.empty();
+    }
 }

@@ -1,4 +1,4 @@
-package org.example.canvaslearningassistant.entities;
+package org.example.canvaslearningassistant.entity;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;

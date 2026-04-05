@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -79,14 +80,19 @@ public class QuizSyncService {
         entity.setSubmittedAt(model.getSubmittedAt() != null ? model.getSubmittedAt() : OffsetDateTime.now());
 
         if (model.getAnswers() != null) {
-            List<CanvasQuizSubmissionQuestionResponse> answerEntities = model.getAnswers()
+            List<CanvasQuizSubmissionQuestion> answerEntities = model.getAnswers()
                     .stream()
                     .map(a -> {
-                        CanvasQuizQuestion question = quizQuestionRepository.findById(a.getQuestionId()).orElseThrow(() -> new RuntimeException("Question not found"));
-                        CanvasQuizQuestionAnswer answer = quizQuestionAnswerRepository.findById(new CanvasQuizQuestionAnswerId(question.getId(), a.getAnswersId())).orElseThrow(() -> new RuntimeException("Question not found"));
+                        CanvasQuizSubmissionQuestion questionResponse = new CanvasQuizSubmissionQuestion();
 
-                        CanvasQuizSubmissionQuestionResponse questionResponse = new CanvasQuizSubmissionQuestionResponse();
-                        questionResponse.setAnswer(answer);
+                        CanvasQuizQuestion question = quizQuestionRepository.findById(a.getQuestionId()).orElseThrow(() -> new RuntimeException("Question not found"));
+
+                        List<CanvasQuizQuestionAnswer> answers = new ArrayList<>();
+                        for (Integer answerId : a.getAnswersIds()) {
+                            answers.add(quizQuestionAnswerRepository.findById(new CanvasQuizQuestionAnswerId(question.getId(), answerId)).orElseThrow(() -> new RuntimeException("Question not found")));
+                        }
+
+                        questionResponse.setSelectedAnswers(answers);
                         questionResponse.setSubmission(entity);
 
                         return questionResponse;

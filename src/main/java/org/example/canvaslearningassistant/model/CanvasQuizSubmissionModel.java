@@ -1,11 +1,9 @@
 package org.example.canvaslearningassistant.model;
 
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.List;
 
@@ -20,5 +18,5 @@ public class CanvasQuizSubmissionModel {
     private Integer attempt;          // attempt number
     private OffsetDateTime submittedAt;
 
-    private List<CanvasQuizSubmissionAnswerModel> answers; // list of answers
+    private List<CanvasQuizSubmissionQuestionModel> answers; // list of answers
 }

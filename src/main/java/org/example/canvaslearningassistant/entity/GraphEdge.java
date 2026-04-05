@@ -1,28 +1,29 @@
 package org.example.canvaslearningassistant.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.io.Serializable;
 
 @Entity
-@Data
-@AllArgsConstructor
-@NoArgsConstructor
 @Table(name = "graph_edges")
-public class GraphEdge implements Serializable {
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+public class GraphEdge {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;  // primary key
+    private Long id;
 
-    @Column(name = "node_1", nullable = false)
-    private String firstNode;
+    @ManyToOne
+    @JoinColumn(name = "node_1", nullable = false)
+    private Concept firstNode;
 
-    @Column(name = "node_2", nullable = false)
-    private String secondNode;
+    @ManyToOne
+    @JoinColumn(name = "node_2", nullable = false)
+    private Concept secondNode;
 
     @Column(nullable = false)
     private String edge;

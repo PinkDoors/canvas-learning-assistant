@@ -5,12 +5,14 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class CanvasQuizSubmissionAnswerModel {
+public class CanvasQuizSubmissionQuestionModel {
 
     private Integer questionId;
-    private Integer answersId;
+    private List<Integer> answersIds;
 }

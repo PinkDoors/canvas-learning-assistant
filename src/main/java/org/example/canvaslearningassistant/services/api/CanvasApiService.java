@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.canvaslearningassistant.configuration.CanvasLearningAssistantConfiguration;
 import org.example.canvaslearningassistant.entity.quiz.canvas.*;
-import org.example.canvaslearningassistant.model.CanvasQuizSubmissionAnswerModel;
+import org.example.canvaslearningassistant.model.CanvasQuizSubmissionQuestionModel;
 import org.example.canvaslearningassistant.model.CanvasQuizSubmissionModel;
 import org.example.canvaslearningassistant.model.NewQuizQuestionData;
 import org.springframework.http.*;
@@ -287,28 +287,27 @@ public class CanvasApiService {
 
         List<Map<String, Object>> submissionData = (List<Map<String, Object>>) latestAttempt.get("submission_data");
 
-        List<CanvasQuizSubmissionAnswerModel> canvasQuizSubmissionAnswerModels = null;
+        List<CanvasQuizSubmissionQuestionModel> canvasQuizSubmissionAnswerModels = null;
 
         if (submissionData != null) {
-            canvasQuizSubmissionAnswerModels = submissionData.stream().flatMap(entry -> {
-                List<CanvasQuizSubmissionAnswerModel> answersForQuestion = new ArrayList<>();
+            canvasQuizSubmissionAnswerModels = submissionData.stream().map(entry -> {
+                List<Integer> answersForQuestion = new ArrayList<>();
 
+                CanvasQuizSubmissionQuestionModel answer = new CanvasQuizSubmissionQuestionModel();
                 // handle single and multiple choice answers
                 if (entry.containsKey("answer_id")) {
-                    CanvasQuizSubmissionAnswerModel answer = new CanvasQuizSubmissionAnswerModel();
                     answer.setQuestionId((Integer) entry.get("question_id"));
-                    answer.setAnswersId((Integer) entry.get("answer_id"));
-                    answersForQuestion.add(answer);
+                    answersForQuestion.add((Integer) entry.get("answer_id"));
                 }
                 for (Map.Entry<String, Object> e : entry.entrySet()) {
                     if (e.getKey().startsWith("answer_") && "1".equals(String.valueOf(e.getValue()))) {
-                        CanvasQuizSubmissionAnswerModel answer = new CanvasQuizSubmissionAnswerModel();
                         answer.setQuestionId((Integer) entry.get("question_id"));
-                        answer.setAnswersId(Integer.parseInt(e.getKey().substring(7)));
-                        answersForQuestion.add(answer);
+                        answersForQuestion.add(Integer.parseInt(e.getKey().substring(7)));
                     }
                 }
-                return answersForQuestion.stream();
+                answer.setAnswersIds(answersForQuestion);
+
+                return answer;
             }).toList();
         }
 

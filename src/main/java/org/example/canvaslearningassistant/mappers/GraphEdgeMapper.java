@@ -6,8 +6,8 @@ import org.example.canvaslearningassistant.entity.GraphEdge;
 public class GraphEdgeMapper {
     public static GraphEdgeDto toDto(GraphEdge graphEdge) {
         return new GraphEdgeDto(
-                graphEdge.getFirstNode(),
-                graphEdge.getSecondNode(),
+                graphEdge.getFirstNode().getName(),
+                graphEdge.getSecondNode().getName(),
                 graphEdge.getEdge()
         );
     }

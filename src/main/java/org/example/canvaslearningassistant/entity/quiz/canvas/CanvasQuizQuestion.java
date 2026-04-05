@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.Getter;
+import org.example.canvaslearningassistant.entity.Concept;
 
 import java.util.List;
 
@@ -22,6 +23,10 @@ public class CanvasQuizQuestion {
     private String questionName;
     private String questionText;
     private String questionType;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "concept_id")
+    private Concept concept;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "quiz_id")

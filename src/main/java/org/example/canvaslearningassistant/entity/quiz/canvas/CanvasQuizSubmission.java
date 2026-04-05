@@ -3,7 +3,6 @@ package org.example.canvaslearningassistant.entity.quiz.canvas;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.List;
 
@@ -28,5 +27,5 @@ public class CanvasQuizSubmission {
     private CanvasQuiz quiz;
 
     @OneToMany(mappedBy = "submission", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<CanvasQuizSubmissionQuestionResponse> answers;
+    private List<CanvasQuizSubmissionQuestion> answers;
 }

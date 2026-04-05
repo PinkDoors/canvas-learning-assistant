@@ -2,12 +2,14 @@ package org.example.canvaslearningassistant.services;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.example.canvaslearningassistant.entity.Concept;
 import org.example.canvaslearningassistant.entity.GraphEdge;
 import org.example.canvaslearningassistant.model.NewQuizQuestionData;
 import org.example.canvaslearningassistant.entity.quiz.canvas.CanvasQuiz;
 import org.example.canvaslearningassistant.entity.quiz.canvas.CanvasQuizQuestion;
 import org.example.canvaslearningassistant.exceptions.QuizGenerationException;
 import org.example.canvaslearningassistant.repository.CanvasQuizRepository;
+import org.example.canvaslearningassistant.repository.ConceptRepository;
 import org.example.canvaslearningassistant.repository.GraphEdgeRepository;
 import org.example.canvaslearningassistant.services.api.CanvasApiService;
 import org.example.canvaslearningassistant.services.api.KnowledgeGraphApiService;
@@ -17,6 +19,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Slf4j
 @Service
@@ -28,10 +34,12 @@ public class KnowledgeGraphService {
     private final KnowledgeGraphApiService knowledgeGraphApiService;
     private final GraphEdgeRepository graphEdgeRepository;
     private final CanvasQuizRepository canvasQuizRepository;
+    private final ConceptRepository conceptRepository;
 
+    @Transactional
     public List<GraphEdge> getGraph(Integer courseId, String accessToken) {
 
-        // Check if graph exists
+        // 1. Check if graph exists
         List<GraphEdge> existingGraph = graphEdgeRepository.findByCourseId(courseId);
         if (!existingGraph.isEmpty()) {
             log.info("Found existing graph in PostgreSQL for course {}", courseId);
@@ -39,6 +47,7 @@ public class KnowledgeGraphService {
         }
 
         log.info("No existing graph found. Calling KnowledgeGraph API for course {}", courseId);
+
         var courseDescription = canvasApiService.getFrontPageContent(courseId, accessToken);
         var graphEdges = knowledgeGraphApiService.generateKnowledgeGraph(courseDescription);
 
@@ -47,13 +56,51 @@ public class KnowledgeGraphService {
             return List.of();
         }
 
-        List<GraphEdge> entities = graphEdges.stream()
-                .map(dto -> new GraphEdge(null, dto.getFirstNode(), dto.getSecondNode(), dto.getEdge(), courseId))
+        // 2. Collect all unique concept names
+        Set<String> conceptNames = graphEdges.stream()
+                .flatMap(dto -> Stream.of(dto.getFirstNode(), dto.getSecondNode()))
+                .collect(Collectors.toSet());
+
+        // 3. Load existing concepts in ONE query
+        List<Concept> existingConcepts = conceptRepository.findByNameIn(new ArrayList<>(conceptNames));
+
+        Map<String, Concept> conceptMap = existingConcepts.stream()
+                .collect(Collectors.toMap(Concept::getName, c -> c));
+
+        // 4. Create missing concepts
+        List<Concept> newConcepts = conceptNames.stream()
+                .filter(name -> !conceptMap.containsKey(name))
+                .map(name -> {
+                    var newConcept = new Concept();
+                    newConcept.setName(name);
+                    return newConcept;
+                })
                 .toList();
 
-        // Save all edges
+        if (!newConcepts.isEmpty()) {
+            conceptRepository.saveAll(newConcepts);
+            newConcepts.forEach(c -> conceptMap.put(c.getName(), c));
+        }
+
+        // 5. Build GraphEdge entities using managed Concept objects
+        List<GraphEdge> entities = graphEdges.stream()
+                .map(dto -> new GraphEdge(
+                        null,
+                        conceptMap.get(dto.getFirstNode()),
+                        conceptMap.get(dto.getSecondNode()),
+                        dto.getEdge(),
+                        courseId
+                ))
+                .toList();
+
+        // 6. Save all edges
         List<GraphEdge> savedEdges = graphEdgeRepository.saveAll(entities);
-        log.info("Saved {} new edges for course {}", savedEdges.size(), courseId);
+
+        log.info("Saved {} new edges and {} concepts for course {}",
+                savedEdges.size(),
+                newConcepts.size(),
+                courseId
+        );
 
         return savedEdges;
     }

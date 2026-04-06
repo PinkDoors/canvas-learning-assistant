@@ -84,13 +84,14 @@ public class KnowledgeGraphService {
 
         // 5. Build GraphEdge entities using managed Concept objects
         List<GraphEdge> entities = graphEdges.stream()
-                .map(dto -> new GraphEdge(
-                        null,
-                        conceptMap.get(dto.getFirstNode()),
-                        conceptMap.get(dto.getSecondNode()),
-                        dto.getEdge(),
-                        courseId
-                ))
+                .map(dto -> {
+                    var newGraphEdge = new GraphEdge();
+                    newGraphEdge.setFirstNode(conceptMap.get(dto.getFirstNode()));
+                    newGraphEdge.setSecondNode(conceptMap.get(dto.getSecondNode()));
+                    newGraphEdge.setEdge(dto.getEdge());
+                    newGraphEdge.setCourseId(courseId);
+                    return newGraphEdge;
+                })
                 .toList();
 
         // 6. Save all edges
@@ -125,12 +126,14 @@ public class KnowledgeGraphService {
 
         log.info("Creating questions for quiz {}", canvasQuiz.getId());
         for (NewQuizQuestionData question : questions) {
+            Concept concept = conceptRepository.findByName(question.getConcept()).orElseThrow(() -> new RuntimeException(""));
             CanvasQuizQuestion canvasQuizQuestion = canvasApiService.addQuizQuestion(
                     courseId,
                     canvasQuiz.getId(),
                     question,
                     accessToken
             );
+            canvasQuizQuestion.setConcept(concept);
             canvasQuizQuestion.setQuiz(canvasQuiz);
             createdCanvasQuizQuestions.add(canvasQuizQuestion);
         }

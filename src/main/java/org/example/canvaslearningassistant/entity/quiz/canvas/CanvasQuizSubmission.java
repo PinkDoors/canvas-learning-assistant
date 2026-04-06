@@ -27,5 +27,5 @@ public class CanvasQuizSubmission {
     private CanvasQuiz quiz;
 
     @OneToMany(mappedBy = "submission", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<CanvasQuizSubmissionQuestion> answers;
+    private List<CanvasQuizSubmissionQuestion> questions;
 }

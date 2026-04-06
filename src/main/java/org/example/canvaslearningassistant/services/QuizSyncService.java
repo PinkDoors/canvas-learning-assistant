@@ -24,6 +24,8 @@ import java.util.stream.Collectors;
 public class QuizSyncService {
 
     private final CanvasApiService canvasApiService;
+    private final MasteryService masteryService;
+
     private final CanvasQuizRepository canvasQuizRepository;
     private final CanvasQuizSubmissionRepository quizSubmissionRepository;
 
@@ -66,6 +68,8 @@ public class QuizSyncService {
                 });
 
         log.info("Finished syncing quiz results for student {}", studentId);
+
+        masteryService.calculateStudentMastery(studentId);
     }
 
     /**
@@ -92,13 +96,14 @@ public class QuizSyncService {
                             answers.add(quizQuestionAnswerRepository.findById(new CanvasQuizQuestionAnswerId(question.getId(), answerId)).orElseThrow(() -> new RuntimeException("Question not found")));
                         }
 
+                        questionResponse.setQuestion(question);
                         questionResponse.setSelectedAnswers(answers);
                         questionResponse.setSubmission(entity);
 
                         return questionResponse;
                     }).collect(Collectors.toList());
 
-            entity.setAnswers(answerEntities);
+            entity.setQuestions(answerEntities);
         }
 
         return entity;

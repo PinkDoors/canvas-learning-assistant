@@ -1,7 +1,7 @@
 package org.example.canvaslearningassistant.services.api;
 
 import lombok.RequiredArgsConstructor;
-import org.example.canvaslearningassistant.configuration.CanvasLearningAssistantConfiguration;
+import org.example.canvaslearningassistant.configuration.ExternalApiConfiguration;
 import org.example.canvaslearningassistant.dto.AskRequest;
 import org.example.canvaslearningassistant.dto.GraphEdgeDto;
 import org.example.canvaslearningassistant.entity.StudentKnowledge;
@@ -19,11 +19,11 @@ import java.util.stream.Collectors;
 public class KnowledgeGraphApiService {
 
     private final RestTemplate restTemplate = new RestTemplate();
-    private final CanvasLearningAssistantConfiguration canvasLearningAssistantConfiguration;
+    private final ExternalApiConfiguration externalApiConfiguration;
 
     public String ask(String userMessage, List<StudentKnowledge> knowledgeList) {
 
-        final String API_URL = canvasLearningAssistantConfiguration.getQuizApiHost() + "/ask";
+        final String API_URL = externalApiConfiguration.getQuizApiHost() + "/ask";
 
         // convert to map: concept -> mastery
         Map<String, Integer> knowledgeMap = knowledgeList.stream()
@@ -54,7 +54,7 @@ public class KnowledgeGraphApiService {
     }
 
     public List<GraphEdgeDto> generateKnowledgeGraph(String userMessage) {
-        final String API_URL = canvasLearningAssistantConfiguration.getQuizApiHost() + "/generate_graph";
+        final String API_URL = externalApiConfiguration.getQuizApiHost() + "/generate_graph";
 
         // Build request body
         Map<String, Object> requestBody = Map.of(

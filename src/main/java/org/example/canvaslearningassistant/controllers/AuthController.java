@@ -2,6 +2,8 @@ package org.example.canvaslearningassistant.controllers;
 
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
+import lombok.RequiredArgsConstructor;
+import org.example.canvaslearningassistant.configuration.CanvasConfiguration;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.ModelAndView;
@@ -11,8 +13,11 @@ import java.text.ParseException;
 import java.util.Map;
 
 @RestController
+@RequiredArgsConstructor
 @RequestMapping("/lti")
 public class AuthController {
+
+    private final CanvasConfiguration canvasConfiguration;
 
     @PostMapping("/login")
     public ResponseEntity<Void> login(@RequestParam Map<String,String> params) {
@@ -43,7 +48,7 @@ public class AuthController {
                         "&prompt=%s" +
                         "&lti_message_hint=%s",
                 oidcEndpoint,
-                "10000000000003", // TODO: move to config
+                canvasConfiguration.getClientId(),
                 java.net.URLEncoder.encode(loginHint, StandardCharsets.UTF_8),
                 java.net.URLEncoder.encode(targetLinkUri, StandardCharsets.UTF_8),
                 java.net.URLEncoder.encode(targetLinkUri, StandardCharsets.UTF_8), // TODO: change redirect link, current due to missing canvas verification step

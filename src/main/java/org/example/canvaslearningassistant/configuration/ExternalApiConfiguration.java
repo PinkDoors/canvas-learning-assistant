@@ -6,7 +6,7 @@ import org.springframework.context.annotation.Configuration;
 
 @Getter
 @Configuration
-public class CanvasLearningAssistantConfiguration {
+public class ExternalApiConfiguration {
 
     @Value("${canvas-api.host}")
     private String canvasApiHost;

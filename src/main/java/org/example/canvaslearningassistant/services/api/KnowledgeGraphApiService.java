@@ -2,7 +2,9 @@ package org.example.canvaslearningassistant.services.api;
 
 import lombok.RequiredArgsConstructor;
 import org.example.canvaslearningassistant.configuration.CanvasLearningAssistantConfiguration;
+import org.example.canvaslearningassistant.dto.AskRequest;
 import org.example.canvaslearningassistant.dto.GraphEdgeDto;
+import org.example.canvaslearningassistant.entity.StudentKnowledge;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
@@ -10,6 +12,7 @@ import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -18,8 +21,36 @@ public class KnowledgeGraphApiService {
     private final RestTemplate restTemplate = new RestTemplate();
     private final CanvasLearningAssistantConfiguration canvasLearningAssistantConfiguration;
 
-    public List<GraphEdgeDto> ask(String userMessage) {
-        throw new UnsupportedOperationException("Communication is not yet implemented");
+    public String ask(String userMessage, List<StudentKnowledge> knowledgeList) {
+
+        final String API_URL = canvasLearningAssistantConfiguration.getQuizApiHost() + "/ask";
+
+        // convert to map: concept -> mastery
+        Map<String, Integer> knowledgeMap = knowledgeList.stream()
+                .collect(Collectors.toMap(
+                        k -> k.getConcept().getName(),
+                        StudentKnowledge::getMasteryLevel
+                ));
+
+        AskRequest request = new AskRequest(
+                userMessage,
+                knowledgeMap
+        );
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<AskRequest> entity = new HttpEntity<>(request, headers);
+
+        ResponseEntity<Map<String, String>> response =
+                restTemplate.exchange(
+                        API_URL,
+                        HttpMethod.POST,
+                        entity,
+                        new ParameterizedTypeReference<>() {}
+                );
+
+        return response.getBody().get("response");
     }
 
     public List<GraphEdgeDto> generateKnowledgeGraph(String userMessage) {

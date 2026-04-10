@@ -1,25 +1,50 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
+    <meta charset="UTF-8">
+    <title>LLM + Graph</title>
+
     <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+
     <style>
         body {
             font-family: Arial, sans-serif;
             margin: 20px;
         }
 
+        textarea {
+            width: 500px;
+        }
+
+        pre {
+            background: #f5f5f5;
+            padding: 10px;
+        }
+
         #graphContainer {
             height: 600px;
             border: 1px solid #ccc;
+            margin-top: 20px;
         }
     </style>
 </head>
+
 <body>
 
+<!-- CHAT -->
+<h3>LLM Assistant</h3>
+
+<textarea id="input" rows="4"></textarea><br/>
+<button onclick="send()">Send</button>
+
+<pre id="output"></pre>
+
+<hr>
+
+<!-- ORIGINAL CONTENT -->
 <h3>Course Knowledge Graph</h3>
 
 <form th:action="@{/lti/generate-quiz}" method="post">
-    <!-- Pass LTI parameters if needed -->
     <input type="hidden" name="course_id" th:value="${course_id}" />
     <input type="hidden" name="user_id" th:value="${user_id}" />
     <input type="hidden" name="access_token" th:value="${access_token}" />
@@ -60,6 +85,27 @@
 
 <script th:inline="javascript">
 
+    // CHAT
+    const input = document.getElementById("input");
+    const output = document.getElementById("output");
+
+    function send(){
+        const userId = /*[[${user_id}]]*/ 0;   // Thymeleaf will inject user_id here
+
+        fetch("/lti/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                message: input.value,
+                user_id: userId
+            })
+        })
+            .then(r => r.json())
+            .then(d => output.textContent = d.response)
+            .catch(e => output.textContent = "Error: " + e);
+    }
+
+    // GRAPH
     const graph = /*[[${graph}]]*/ [];
 
     const nodeMap = new Map();
@@ -83,16 +129,16 @@
     }
 
     graph.forEach(rel => {
-        const fromId = getNodeId(rel.firstNode);
-        const toId = getNodeId(rel.secondNode);
+        const fromId = getNodeId(rel.firstNode.name);
+        const toId = getNodeId(rel.secondNode.name);
 
         edges.push({
             from: fromId,
             to: toId,
-            label: "",             // hide edge labels by default
-            edgeLabelText: rel.edge, // store real label in custom field
+            label: "",
+            edgeLabelText: rel.edge,
             arrows: "to",
-            font: { align: "horizontal" } // make edge label horizontal
+            font: { align: "horizontal" }
         });
     });
 
@@ -107,19 +153,19 @@
         layout: {
             hierarchical: {
                 enabled: true,
-                levelSeparation: 120,  // vertical spacing between levels
-                nodeSpacing: 100,      // horizontal spacing between nodes on the same level
+                levelSeparation: 120,
+                nodeSpacing: 100,
                 treeSpacing: 200,
-                direction: "UD",       // Top-down vertical layout
+                direction: "UD",
                 sortMethod: "directed"
             }
         },
         edges: {
-            smooth: { enabled: false }, // optional: smoother vertical edges
-            font: { align: "horizontal" }    // horizontal edge labels
+            smooth: { enabled: false },
+            font: { align: "horizontal" }
         },
         physics: {
-            enabled: false // turn off physics for hierarchical layout
+            enabled: false
         },
         nodes: {
             shape: "dot",
@@ -130,7 +176,6 @@
 
     const network = new vis.Network(container, data, options);
 
-    // Show edge label when clicked
     network.on("selectEdge", function(params) {
         const edgesDS = data.edges;
         const edgeId = params.edges[0];
@@ -138,12 +183,20 @@
         edgesDS.update({ id: edgeId, label: edge.edgeLabelText });
     });
 
-    // Optional: hide label again when deselecting
     network.on("deselectEdge", function(params) {
         const edgesDS = data.edges;
         params.previousSelection.edges.forEach(edgeId => {
             edgesDS.update({ id: edgeId, label: "" });
         });
+    });
+
+    // OPTIONAL: node -> chat
+    network.on("click", function(params){
+        if(params.nodes.length > 0){
+            const nodeId = params.nodes[0];
+            const node = nodes.find(n => n.id === nodeId);
+            input.value = "Explain concept: " + node.label;
+        }
     });
 
 </script>

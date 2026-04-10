@@ -90,4 +90,9 @@ public class MasteryService {
         knowledgeRepository.saveAll(knowledgeList);
         log.info("Saved {} mastery records for student {}", knowledgeList.size(), studentId);
     }
+
+    @Transactional(readOnly = true)
+    public List<StudentKnowledge> getStudentKnowledge(Integer studentId) {
+        return knowledgeRepository.findByStudentId(studentId);
+    }
 }

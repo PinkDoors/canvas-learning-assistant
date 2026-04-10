@@ -1,6 +1,6 @@
-package org.example.canvaslearningassistant.exceptions;
+package org.example.canvaslearningassistant.exception;
 
-public class QuizGenerationException extends Exception {
+public class QuizGenerationException extends RuntimeException {
 
     public QuizGenerationException(String message) {
         super(message);

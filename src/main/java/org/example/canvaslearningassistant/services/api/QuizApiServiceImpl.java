@@ -6,7 +6,7 @@ import org.example.canvaslearningassistant.dto.GraphEdgeDto;
 import org.example.canvaslearningassistant.dto.GenerateQuizQuestionsResponse;
 import org.example.canvaslearningassistant.entity.GraphEdge;
 import org.example.canvaslearningassistant.model.NewQuizQuestionData;
-import org.example.canvaslearningassistant.exceptions.QuizGenerationException;
+import org.example.canvaslearningassistant.exception.QuizGenerationException;
 import org.example.canvaslearningassistant.mappers.GraphEdgeMapper;
 import org.example.canvaslearningassistant.mappers.NewQuizQuestionDataMapper;
 import org.example.canvaslearningassistant.services.api.interfaces.QuizApiService;

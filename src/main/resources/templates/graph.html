@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
 <head>
     <meta charset="UTF-8">
     <title>LLM + Graph</title>
@@ -31,7 +31,6 @@
 
 <body>
 
-<!-- CHAT -->
 <h3>LLM Assistant</h3>
 
 <textarea id="input" rows="4"></textarea><br/>
@@ -41,14 +40,9 @@
 
 <hr>
 
-<!-- ORIGINAL CONTENT -->
 <h3>Course Knowledge Graph</h3>
 
 <form th:action="@{/lti/generate-quiz}" method="post">
-    <input type="hidden" name="course_id" th:value="${course_id}" />
-    <input type="hidden" name="user_id" th:value="${user_id}" />
-    <input type="hidden" name="access_token" th:value="${access_token}" />
-
     <button type="submit" style="
         margin-bottom: 15px;
         padding: 10px 16px;
@@ -63,10 +57,6 @@
 </form>
 
 <form th:action="@{/lti/sync-results}" method="post">
-    <input type="hidden" name="course_id" th:value="${course_id}" />
-    <input type="hidden" name="user_id" th:value="${user_id}" />
-    <input type="hidden" name="access_token" th:value="${access_token}" />
-
     <button type="submit" style="
         margin-bottom: 15px;
         margin-left: 10px;
@@ -85,12 +75,14 @@
 
 <script th:inline="javascript">
 
+    // =========================
     // CHAT
+    // =========================
     const input = document.getElementById("input");
     const output = document.getElementById("output");
 
-    function send(){
-        const userId = /*[[${user_id}]]*/ 0;   // Thymeleaf will inject user_id here
+    function send() {
+        const userId = /*[[${user_id}]]*/ 0;
 
         fetch("/lti/chat", {
             method: "POST",
@@ -105,9 +97,9 @@
             .catch(e => output.textContent = "Error: " + e);
     }
 
-    // GRAPH
-    const graph = /*[[${graph}]]*/ [];
-
+    // =========================
+    // GRAPH STATE
+    // =========================
     const nodeMap = new Map();
     const nodes = [];
     const edges = [];
@@ -118,8 +110,8 @@
             nodeMap.set(label, id);
 
             nodes.push({
-                id: id,
-                label: label,
+                id,
+                label,
                 shape: "dot",
                 size: 20,
                 font: { multi: "html", size: 16, face: "Arial" }
@@ -128,76 +120,137 @@
         return nodeMap.get(label);
     }
 
-    graph.forEach(rel => {
-        const fromId = getNodeId(rel.firstNode.name);
-        const toId = getNodeId(rel.secondNode.name);
+    function renderGraph(graph) {
 
-        edges.push({
-            from: fromId,
-            to: toId,
-            label: "",
-            edgeLabelText: rel.edge,
-            arrows: "to",
-            font: { align: "horizontal" }
+        nodeMap.clear();
+        nodes.length = 0;
+        edges.length = 0;
+
+        graph.forEach(rel => {
+            const fromId = getNodeId(rel.firstNode.name);
+            const toId = getNodeId(rel.secondNode.name);
+
+            edges.push({
+                id: edges.length + 1,
+                from: fromId,
+                to: toId,
+
+                label: "",               // never used for truth
+                labelState: false,       // 🔥 STATE SOURCE OF TRUTH
+
+                edgeLabelText: rel.edge,
+
+                arrows: "to",
+                font: { align: "horizontal" }
+            });
         });
-    });
 
-    const container = document.getElementById("graphContainer");
+        const container = document.getElementById("graphContainer");
 
-    const data = {
-        nodes: new vis.DataSet(nodes),
-        edges: new vis.DataSet(edges)
-    };
+        const data = {
+            nodes: new vis.DataSet(nodes),
+            edges: new vis.DataSet(edges)
+        };
 
-    const options = {
-        layout: {
-            hierarchical: {
-                enabled: true,
-                levelSeparation: 120,
-                nodeSpacing: 100,
-                treeSpacing: 200,
-                direction: "UD",
-                sortMethod: "directed"
+        const network = new vis.Network(container, data, {
+            layout: {
+                hierarchical: {
+                    enabled: true,
+                    levelSeparation: 120,
+                    nodeSpacing: 100,
+                    treeSpacing: 200,
+                    direction: "UD",
+                    sortMethod: "directed"
+                }
+            },
+            edges: {
+                smooth: { enabled: false },
+                font: { align: "horizontal" }
+            },
+            physics: { enabled: false },
+            nodes: {
+                shape: "dot",
+                size: 20,
+                font: { multi: "html", size: 16, face: "Arial" }
             }
-        },
-        edges: {
-            smooth: { enabled: false },
-            font: { align: "horizontal" }
-        },
-        physics: {
-            enabled: false
-        },
-        nodes: {
-            shape: "dot",
-            size: 20,
-            font: { multi: "html", size: 16, face: "Arial" }
-        }
-    };
-
-    const network = new vis.Network(container, data, options);
-
-    network.on("selectEdge", function(params) {
-        const edgesDS = data.edges;
-        const edgeId = params.edges[0];
-        const edge = edgesDS.get(edgeId);
-        edgesDS.update({ id: edgeId, label: edge.edgeLabelText });
-    });
-
-    network.on("deselectEdge", function(params) {
-        const edgesDS = data.edges;
-        params.previousSelection.edges.forEach(edgeId => {
-            edgesDS.update({ id: edgeId, label: "" });
         });
-    });
 
-    // OPTIONAL: node -> chat
-    network.on("click", function(params){
-        if(params.nodes.length > 0){
-            const nodeId = params.nodes[0];
-            const node = nodes.find(n => n.id === nodeId);
-            input.value = "Explain concept: " + node.label;
-        }
-    });
+        // =========================
+        // CLICK HANDLER (ROBUST)
+        // =========================
+        network.on("click", function(params) {
+
+            const edgesDS = data.edges;
+
+            console.log("CLICK:", params);
+
+            // =========================
+            // EDGE CLICK → TOGGLE
+            // =========================
+            if (params.edges.length > 0) {
+
+                const edgeId = params.edges[0];
+                const edge = edgesDS.get(edgeId);
+
+                console.log("EDGE:", edge);
+
+                const newState = !edge.labelState;
+
+                console.log("Toggle labelState:", edge.labelState, "→", newState);
+
+                edgesDS.update({
+                    id: edgeId,
+                    labelState: newState,
+                    label: newState ? edge.edgeLabelText : ' '
+                });
+
+                return;
+            }
+
+            // =========================
+            // NODE CLICK
+            // =========================
+            if (params.nodes.length > 0) {
+
+                const node = nodes.find(n => n.id === params.nodes[0]);
+
+                console.log("NODE:", node);
+
+                input.value = "Explain concept: " + node.label;
+
+                return;
+            }
+
+            // =========================
+            // EMPTY SPACE → CLEAR ALL
+            // =========================
+            console.log("EMPTY CLICK → clearing all");
+
+            edgesDS.update(
+                edgesDS.get().map(e => ({
+                    id: e.id,
+                    labelState: false,
+                    label: ' '
+                }))
+            );
+        });
+    }
+
+    // =========================
+    // LOAD GRAPH
+    // =========================
+    function loadGraph() {
+        fetch("/lti/graph-data")
+            .then(r => r.json())
+            .then(renderGraph)
+            .catch(err => {
+                console.error(err);
+                document.getElementById("graphContainer").innerText =
+                    "Error loading graph";
+            });
+    }
+
+    window.addEventListener("load", loadGraph);
 
 </script>
 

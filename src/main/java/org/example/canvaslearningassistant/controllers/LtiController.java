@@ -1,7 +1,9 @@
 package org.example.canvaslearningassistant.controllers;
 
+import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.example.canvaslearningassistant.dto.GraphSessionData;
 import org.example.canvaslearningassistant.entity.GraphEdge;
 import org.example.canvaslearningassistant.entity.StudentKnowledge;
 import org.example.canvaslearningassistant.services.KnowledgeGraphService;
@@ -10,6 +12,7 @@ import org.example.canvaslearningassistant.services.QuizSyncService;
 import org.example.canvaslearningassistant.services.api.CanvasApiService;
 import org.example.canvaslearningassistant.services.api.KnowledgeGraphApiService;
 import org.example.canvaslearningassistant.utils.IdTokenClaimsUtils;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -34,47 +37,85 @@ public class LtiController {
 
     private final String accessToken = "3ey3ZnE8ta3Ln8JfknHyN6MNxzXEQP8UNPtucWrWACW2evTeLhu2FwkZf7TeBuAu";
 
+    private final String errorThymeleafTemplate = "error";
+    private final String ltiThymeleafTemplate = "graph";
+    private final String generatingQuizThymeleafTemplate = "generating-quiz";
+
     @PostMapping("/knowledge-graph")
-    public String knowledgeGraph(@RequestParam Map<String, String> body, Model model) throws ParseException {
+    public String knowledgeGraph(@RequestParam Map<String, String> body,
+                                 Model model,
+                                 HttpSession session) throws ParseException {
         Optional<String> contextId = IdTokenClaimsUtils.getLtiContextId(body.get("id_token"));
         if (contextId.isEmpty()) {
             model.addAttribute("error", "Missing or invalid LTI context ID");
-            return "graph";
+            return errorThymeleafTemplate;
         }
 
         Optional<Integer> userId = IdTokenClaimsUtils.getUserId(body.get("id_token"));
         if (userId.isEmpty()) {
-            model.addAttribute("error", "Missing or invalid LTI context ID");
-            return "graph";
+            model.addAttribute("error", "Missing or invalid user ID");
+            return errorThymeleafTemplate;
         }
-        model.addAttribute("user_id", userId.get());
 
         Optional<Integer> courseId = canvasApiService.getCourseId(contextId.get(), accessToken);
         if (courseId.isEmpty()) {
             model.addAttribute("error", "No course id found");
-            return "graph";
+            return errorThymeleafTemplate;
         }
-        model.addAttribute("course_id", courseId.get());
 
         List<GraphEdge> graphEdges =
                 knowledgeGraphService.getGraph(courseId.get(), accessToken);
-        model.addAttribute("graph", graphEdges);
 
-        return "graph";
+        GraphSessionData graphSessionData = new GraphSessionData(graphEdges, courseId.get(), userId.get());
+        session.setAttribute("graph_session_data", graphSessionData);
+
+        return ltiThymeleafTemplate;
+    }
+
+    @GetMapping("/graph-data")
+    @ResponseBody
+    public List<GraphEdge> getGraph(HttpSession session) {
+
+        GraphSessionData data =
+                (GraphSessionData) session.getAttribute("graph_session_data");
+
+        if (data == null) {
+            return List.of();
+        }
+
+        return data.graph();
     }
 
     @PostMapping("/generate-quiz")
-    public String generateQuiz(@RequestParam Map<String, String> body, Model model) {
+    public String generateQuiz() {
+        return generatingQuizThymeleafTemplate;
+    }
+
+    @PostMapping("/generate-quiz-job")
+    public ResponseEntity<?> generateQuizJob(HttpSession session) {
+        GraphSessionData data =
+                (GraphSessionData) session.getAttribute("graph_session_data");
+
+        if (data == null) {
+            return ResponseEntity
+                    .status(400)
+                    .body("Session expired");
+        }
+
         try {
-            Integer courseId = Integer.parseInt(body.get("course_id"));
-            Integer userId = Integer.parseInt(body.get("user_id"));
+            knowledgeGraphService.updateStudentKnowledge(
+                    data.graph(),
+                    data.courseId(),
+                    data.userId(),
+                    accessToken
+            );
 
-            knowledgeGraphService.updateStudentKnowledge(courseId, userId, accessToken);
+            return ResponseEntity.ok("Quiz generated");
 
-            return "graph";
-        } catch (Exception ex){
-            log.error(ex.getMessage(), ex);
-            return "graph";
+        } catch (Exception ex) {
+            return ResponseEntity
+                    .status(500)
+                    .body("Quiz generation failed");
         }
     }
 

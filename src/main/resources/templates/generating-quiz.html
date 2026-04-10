@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Generating Quiz</title>
+</head>
+<body>
+
+<h3 id="status">Please wait while we prepare your quiz...</h3>
+
+<script>
+  // call backend to generate quiz
+  fetch('/lti/generate-quiz-job', { method: 'POST', credentials: 'include' })
+          .then(response => {
+            if (!response.ok) {
+              throw new Error("Quiz generation failed");
+            }
+
+            // update UI when done
+            document.getElementById("status").innerText =
+                    "Quiz generation is finished. Please check quizzes page to complete it.";
+          })
+          .catch(error => {
+            document.getElementById("status").innerText =
+                    "Failed to generate quiz. Please try again.";
+            console.error(error);
+          });
+</script>
+
+</body>
+</html>

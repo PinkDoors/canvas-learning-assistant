@@ -120,12 +120,25 @@ public class LtiController {
     }
 
     @PostMapping("/sync-results")
-    public String syncResults(HttpSession session) {
-        GraphSessionData data =
-                (GraphSessionData) session.getAttribute("graph_session_data");
-        quizSyncService.syncAllStudentResults(data.courseId(), data.userId(), accessToken);
+    public ResponseEntity<?> syncResults(HttpSession session) {
+        try {
+            GraphSessionData data =
+                    (GraphSessionData) session.getAttribute("graph_session_data");
 
-        return "graph";
+            if (data == null) {
+                return ResponseEntity
+                        .badRequest()
+                        .body(Map.of("error", "Missing graph session data"));
+            }
+
+            quizSyncService.syncAllStudentResults(data.courseId(), data.userId(), accessToken);
+        } catch (Exception ex) {
+            log.error("Sync results failed", ex);
+
+            return ResponseEntity
+                    .status(500)
+                    .body(Map.of("error", "Internal server error"));
+        }
     }
 
     @PostMapping("/chat")
@@ -157,7 +170,7 @@ public class LtiController {
                     masteryService.getStudentKnowledge(data.userId());
 
             String response =
-                    knowledgeGraphApiService.ask(userMessage, studentKnowledges);
+                    knowledgeGraphApiService.ask(userMessage, studentKnowledges, data.graph());
 
             return ResponseEntity.ok(Map.of("response", response));
 

@@ -1,12 +1,12 @@
 package org.example.canvaslearningassistant.services.api;
 
 import lombok.RequiredArgsConstructor;
-import org.example.canvaslearningassistant.configuration.CanvasLearningAssistantConfiguration;
+import org.example.canvaslearningassistant.configuration.ExternalApiConfiguration;
 import org.example.canvaslearningassistant.dto.GraphEdgeDto;
 import org.example.canvaslearningassistant.dto.GenerateQuizQuestionsResponse;
 import org.example.canvaslearningassistant.entity.GraphEdge;
 import org.example.canvaslearningassistant.model.NewQuizQuestionData;
-import org.example.canvaslearningassistant.exceptions.QuizGenerationException;
+import org.example.canvaslearningassistant.exception.QuizGenerationException;
 import org.example.canvaslearningassistant.mappers.GraphEdgeMapper;
 import org.example.canvaslearningassistant.mappers.NewQuizQuestionDataMapper;
 import org.example.canvaslearningassistant.services.api.interfaces.QuizApiService;
@@ -23,11 +23,11 @@ import java.util.Map;
 public class QuizApiServiceImpl implements QuizApiService {
 
     private final RestTemplate restTemplate = new RestTemplate();
-    private final CanvasLearningAssistantConfiguration canvasLearningAssistantConfiguration;
+    private final ExternalApiConfiguration externalApiConfiguration;
 
     @Override
     public List<NewQuizQuestionData> generateQuizQuestions(List<GraphEdge> graph, int numQuestions) throws QuizGenerationException {
-        String url = canvasLearningAssistantConfiguration.getQuizApiHost() + "/generate_quiz_questions";
+        String url = externalApiConfiguration.getQuizApiHost() + "/generate_quiz_questions";
 
         List<GraphEdgeDto> graphEdgeDtos = graph.stream().map(GraphEdgeMapper::toDto).toList();
 

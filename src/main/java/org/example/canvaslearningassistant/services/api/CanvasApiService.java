@@ -2,7 +2,7 @@ package org.example.canvaslearningassistant.services.api;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.example.canvaslearningassistant.configuration.CanvasLearningAssistantConfiguration;
+import org.example.canvaslearningassistant.configuration.ExternalApiConfiguration;
 import org.example.canvaslearningassistant.entity.quiz.canvas.*;
 import org.example.canvaslearningassistant.model.CanvasQuizSubmissionQuestionModel;
 import org.example.canvaslearningassistant.model.CanvasQuizSubmissionModel;
@@ -22,13 +22,13 @@ import org.jsoup.Jsoup;
 @RequiredArgsConstructor
 public class CanvasApiService {
 
-    private final CanvasLearningAssistantConfiguration canvasLearningAssistantConfiguration;
+    private final ExternalApiConfiguration externalApiConfiguration;
     private final RestTemplate restTemplate = new RestTemplate();
 
     private static final String URL_BASE = "/api/v1/courses/";
 
     public Optional<Integer> getCourseId(String ltiContextId, String accessToken) {
-        String url = canvasLearningAssistantConfiguration.getCanvasApiHost() + URL_BASE + "lti_context_id:" + ltiContextId;
+        String url = externalApiConfiguration.getCanvasApiHost() + URL_BASE + "lti_context_id:" + ltiContextId;
 
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);   // Canvas OAuth2 token
@@ -52,7 +52,7 @@ public class CanvasApiService {
     }
 
     public String getFrontPageContent(Integer courseId, String accessToken) {
-        String url = canvasLearningAssistantConfiguration.getCanvasApiHost() + URL_BASE + courseId + "/front_page";
+        String url = externalApiConfiguration.getCanvasApiHost() + URL_BASE + courseId + "/front_page";
 
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);   // Canvas OAuth2 token
@@ -81,7 +81,7 @@ public class CanvasApiService {
                                            String description,
                                            String accessToken) {
 
-        String url = canvasLearningAssistantConfiguration.getCanvasApiHost()
+        String url = externalApiConfiguration.getCanvasApiHost()
                 + URL_BASE + courseId + "/quizzes";
 
         HttpHeaders headers = new HttpHeaders();
@@ -125,7 +125,7 @@ public class CanvasApiService {
                                Integer quizId,
                                String accessToken) {
 
-        String url = canvasLearningAssistantConfiguration.getCanvasApiHost()
+        String url = externalApiConfiguration.getCanvasApiHost()
                 + URL_BASE + courseId + "/quizzes/" + quizId;
 
         HttpHeaders headers = new HttpHeaders();
@@ -156,7 +156,7 @@ public class CanvasApiService {
                                     Integer studentId,
                                     String accessToken) {
         // 2️⃣ Create the assignment override for that assignment ID
-        String url = canvasLearningAssistantConfiguration.getCanvasApiHost() + URL_BASE + courseId + "/assignments/" + quizId + "/overrides";
+        String url = externalApiConfiguration.getCanvasApiHost() + URL_BASE + courseId + "/assignments/" + quizId + "/overrides";
 
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
@@ -185,7 +185,7 @@ public class CanvasApiService {
                                               NewQuizQuestionData quizQuestion,
                                               String accessToken) {
 
-        String url = canvasLearningAssistantConfiguration.getCanvasApiHost()
+        String url = externalApiConfiguration.getCanvasApiHost()
                 + "/api/v1/courses/" + courseId
                 + "/quizzes/" + quizId + "/questions";
 
@@ -259,7 +259,7 @@ public class CanvasApiService {
             Integer userId,
             String accessToken
     ) {
-        String url = canvasLearningAssistantConfiguration.getCanvasApiHost()
+        String url = externalApiConfiguration.getCanvasApiHost()
                 + "/api/v1/courses/" + courseId
                 + "/assignments/" + assignmentId
                 + "/submissions/" + userId

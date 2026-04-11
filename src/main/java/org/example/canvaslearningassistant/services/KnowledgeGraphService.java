@@ -7,7 +7,7 @@ import org.example.canvaslearningassistant.entity.GraphEdge;
 import org.example.canvaslearningassistant.model.NewQuizQuestionData;
 import org.example.canvaslearningassistant.entity.quiz.canvas.CanvasQuiz;
 import org.example.canvaslearningassistant.entity.quiz.canvas.CanvasQuizQuestion;
-import org.example.canvaslearningassistant.exceptions.QuizGenerationException;
+import org.example.canvaslearningassistant.exception.QuizGenerationException;
 import org.example.canvaslearningassistant.repository.CanvasQuizRepository;
 import org.example.canvaslearningassistant.repository.ConceptRepository;
 import org.example.canvaslearningassistant.repository.GraphEdgeRepository;
@@ -17,6 +17,8 @@ import org.example.canvaslearningassistant.services.api.interfaces.QuizApiServic
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -107,10 +109,9 @@ public class KnowledgeGraphService {
     }
 
     @Transactional
-    public void updateStudentKnowledge(Integer courseId, Integer studentId, String accessToken) throws QuizGenerationException {
-        List<GraphEdge> graphEdges = getGraph(courseId, accessToken);
-
-        String quizTitle = "Knowledge Check Quiz";
+    public void updateStudentKnowledge(List<GraphEdge> graphEdges, Integer courseId, Integer studentId, String accessToken) throws QuizGenerationException {
+        String quizTitle = "Knowledge Check Quiz - " +
+                LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
         String quizDescription = "Auto-generated quiz based on your course knowledge graph.";
         CanvasQuiz canvasQuiz = canvasApiService.createQuiz(
                 courseId,

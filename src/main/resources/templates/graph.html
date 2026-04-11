@@ -26,6 +26,23 @@
             border: 1px solid #ccc;
             margin-top: 20px;
         }
+
+        /* ✅ Loader spinner */
+        .loader {
+            width: 16px;
+            height: 16px;
+            border: 3px solid #ccc;
+            border-top: 3px solid #28a745;
+            border-radius: 50%;
+            display: inline-block;
+            animation: spin 0.8s linear infinite;
+            vertical-align: middle;
+            margin-left: 8px;
+        }
+
+        @keyframes spin {
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 
@@ -34,7 +51,9 @@
 <h3>LLM Assistant</h3>
 
 <textarea id="input" rows="4"></textarea><br/>
-<button onclick="send()">Send</button>
+
+<button id="sendBtn" onclick="send()">Send</button>
+<span id="chatLoader" class="loader" style="display:none;"></span>
 
 <pre id="output"></pre>
 
@@ -56,45 +75,88 @@
     </button>
 </form>
 
-<form th:action="@{/lti/sync-results}" method="post">
-    <button type="submit" style="
-        margin-bottom: 15px;
-        margin-left: 10px;
-        padding: 10px 16px;
-        font-size: 14px;
-        background-color: #28a745;
-        color: white;
-        border: none;
-        border-radius: 5px;
-        cursor: pointer;">
-        Check my quizzes
-    </button>
-</form>
+<!-- ✅ SYNC BUTTON -->
+<button id="syncBtn" onclick="syncResults()" style="
+    margin-bottom: 15px;
+    margin-left: 10px;
+    padding: 10px 16px;
+    font-size: 14px;
+    background-color: #28a745;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;">
+    Check my quizzes
+</button>
+
+<span id="syncLoader" class="loader" style="display:none;"></span>
 
 <div id="graphContainer"></div>
 
 <script th:inline="javascript">
 
     // =========================
-    // CHAT
+    // SYNC RESULTS (AJAX)
+    // =========================
+    function syncResults() {
+        const loader = document.getElementById("syncLoader");
+        const btn = document.getElementById("syncBtn");
+
+        loader.style.display = "inline-block";
+        btn.disabled = true;
+
+        fetch("/lti/sync-results", { method: "POST" })
+            .then(res => {
+                if (!res.ok) throw new Error("Request failed");
+                return res.text();
+            })
+            .then(() => {
+                loader.style.display = "none";
+                btn.disabled = false;
+
+                loadGraph();
+            })
+            .catch(err => {
+                loader.style.display = "none";
+                btn.disabled = false;
+                alert("Error: " + err.message);
+            });
+    }
+
+    // =========================
+    // CHAT (UPDATED WITH SPINNER)
     // =========================
     const input = document.getElementById("input");
     const output = document.getElementById("output");
 
     function send() {
-        const userId = /*[[${user_id}]]*/ 0;
+        const loader = document.getElementById("chatLoader");
+        const btn = document.getElementById("sendBtn");
+
+        loader.style.display = "inline-block";
+        btn.disabled = true;
 
         fetch("/lti/chat", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
                 message: input.value,
-                user_id: userId
             })
         })
-            .then(r => r.json())
-            .then(d => output.textContent = d.response)
-            .catch(e => output.textContent = "Error: " + e);
+            .then(r => {
+                if (!r.ok) throw new Error("Chat request failed");
+                return r.json();
+            })
+            .then(d => {
+                output.textContent = d.response;
+            })
+            .catch(e => {
+                output.textContent = "Error: " + e;
+            })
+            .finally(() => {
+                loader.style.display = "none";
+                btn.disabled = false;
+            });
     }
 
     // =========================
@@ -134,12 +196,9 @@
                 id: edges.length + 1,
                 from: fromId,
                 to: toId,
-
-                label: "",               // never used for truth
-                labelState: false,       // 🔥 STATE SOURCE OF TRUTH
-
+                label: "",
+                labelState: false,
                 edgeLabelText: rel.edge,
-
                 arrows: "to",
                 font: { align: "horizontal" }
             });
@@ -175,62 +234,39 @@
             }
         });
 
-        // =========================
-        // CLICK HANDLER (ROBUST)
-        // =========================
         network.on("click", function(params) {
 
             const edgesDS = data.edges;
 
-            console.log("CLICK:", params);
-
-            // =========================
-            // EDGE CLICK → TOGGLE
-            // =========================
+            // EDGE CLICK
             if (params.edges.length > 0) {
-
                 const edgeId = params.edges[0];
                 const edge = edgesDS.get(edgeId);
 
-                console.log("EDGE:", edge);
-
                 const newState = !edge.labelState;
-
-                console.log("Toggle labelState:", edge.labelState, "→", newState);
 
                 edgesDS.update({
                     id: edgeId,
                     labelState: newState,
-                    label: newState ? edge.edgeLabelText : ' '
+                    label: newState ? edge.edgeLabelText : " "
                 });
 
                 return;
             }
 
-            // =========================
             // NODE CLICK
-            // =========================
             if (params.nodes.length > 0) {
-
                 const node = nodes.find(n => n.id === params.nodes[0]);
-
-                console.log("NODE:", node);
-
                 input.value = "Explain concept: " + node.label;
-
                 return;
             }
 
-            // =========================
-            // EMPTY SPACE → CLEAR ALL
-            // =========================
-            console.log("EMPTY CLICK → clearing all");
-
+            // EMPTY CLICK → CLEAR ALL
             edgesDS.update(
                 edgesDS.get().map(e => ({
                     id: e.id,
                     labelState: false,
-                    label: ' '
+                    label: " "
                 }))
             );
         });

@@ -16,8 +16,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.servlet.mvc.support.RedirectAttributes;
-
 import java.text.ParseException;
 import java.util.List;
 import java.util.Map;
@@ -40,6 +38,8 @@ public class LtiController {
     private final String errorThymeleafTemplate = "error";
     private final String ltiThymeleafTemplate = "graph";
     private final String generatingQuizThymeleafTemplate = "generating-quiz";
+
+    private final String graphSessionDataAttribute = "graph_session_data";
 
     @PostMapping("/knowledge-graph")
     public String knowledgeGraph(@RequestParam Map<String, String> body,
@@ -67,7 +67,7 @@ public class LtiController {
                 knowledgeGraphService.getGraph(courseId.get(), accessToken);
 
         GraphSessionData graphSessionData = new GraphSessionData(graphEdges, courseId.get(), userId.get());
-        session.setAttribute("graph_session_data", graphSessionData);
+        session.setAttribute(graphSessionDataAttribute, graphSessionData);
 
         return ltiThymeleafTemplate;
     }
@@ -75,9 +75,8 @@ public class LtiController {
     @GetMapping("/graph-data")
     @ResponseBody
     public List<GraphEdge> getGraph(HttpSession session) {
-
         GraphSessionData data =
-                (GraphSessionData) session.getAttribute("graph_session_data");
+                (GraphSessionData) session.getAttribute(graphSessionDataAttribute);
 
         if (data == null) {
             return List.of();
@@ -93,16 +92,16 @@ public class LtiController {
 
     @PostMapping("/generate-quiz-job")
     public ResponseEntity<?> generateQuizJob(HttpSession session) {
-        GraphSessionData data =
-                (GraphSessionData) session.getAttribute("graph_session_data");
-
-        if (data == null) {
-            return ResponseEntity
-                    .status(400)
-                    .body("Session expired");
-        }
-
         try {
+            GraphSessionData data =
+                    (GraphSessionData) session.getAttribute(graphSessionDataAttribute);
+
+            if (data == null) {
+                return ResponseEntity
+                        .status(400)
+                        .body("Session expired");
+            }
+
             knowledgeGraphService.updateStudentKnowledge(
                     data.graph(),
                     data.courseId(),
@@ -113,6 +112,7 @@ public class LtiController {
             return ResponseEntity.ok("Quiz generated");
 
         } catch (Exception ex) {
+            log.error("Failed to generate quiz", ex);
             return ResponseEntity
                     .status(500)
                     .body("Quiz generation failed");
@@ -120,37 +120,53 @@ public class LtiController {
     }
 
     @PostMapping("/sync-results")
-    public String syncResults(
-            @RequestParam Map<String, String> body,
-            RedirectAttributes redirectAttributes
-    ) {
-        Integer courseId = Integer.parseInt(body.get("course_id"));
-        Integer userId = Integer.parseInt(body.get("user_id"));
-
-        try {
-            quizSyncService.syncAllStudentResults(courseId, userId, accessToken);
-            redirectAttributes.addFlashAttribute("message", "Quiz results synced successfully!");
-        } catch (Exception e) {
-            log.error(e.getMessage(), e);
-            redirectAttributes.addFlashAttribute("error", "Failed to sync quiz results: " + e.getMessage());
-        }
+    public String syncResults(HttpSession session) {
+        GraphSessionData data =
+                (GraphSessionData) session.getAttribute("graph_session_data");
+        quizSyncService.syncAllStudentResults(data.courseId(), data.userId(), accessToken);
 
         return "graph";
     }
 
     @PostMapping("/chat")
     @ResponseBody
-    public Map<String, String> chat(@RequestBody Map<String, String> body) {
+    public ResponseEntity<Map<String, String>> chat(
+            @RequestBody Map<String, String> body,
+            HttpSession session) {
+
         try {
-            Integer userId = Integer.parseInt(body.get("user_id"));
+            GraphSessionData data =
+                    (GraphSessionData) session.getAttribute("graph_session_data");
+
+            if (data == null) {
+                return ResponseEntity
+                        .badRequest()
+                        .body(Map.of("error", "Missing graph session data"));
+            }
 
             String userMessage = body.get("message");
-            List<StudentKnowledge> studentKnowledges = masteryService.getStudentKnowledge(userId);
-            String response = knowledgeGraphApiService.ask(userMessage, studentKnowledges);
-            return Map.of("response", response);
+
+            // ✅ validate input
+            if (userMessage == null || userMessage.isBlank()) {
+                return ResponseEntity
+                        .badRequest()
+                        .body(Map.of("error", "Message is empty"));
+            }
+
+            List<StudentKnowledge> studentKnowledges =
+                    masteryService.getStudentKnowledge(data.userId());
+
+            String response =
+                    knowledgeGraphApiService.ask(userMessage, studentKnowledges);
+
+            return ResponseEntity.ok(Map.of("response", response));
+
         } catch (Exception e) {
-            log.error(e.getMessage(), e);
-            return null;
+            log.error("Chat error", e);
+
+            return ResponseEntity
+                    .status(500)
+                    .body(Map.of("error", "Internal server error"));
         }
     }
 }

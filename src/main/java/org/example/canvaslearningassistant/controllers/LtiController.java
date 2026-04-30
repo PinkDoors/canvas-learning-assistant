@@ -6,11 +6,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.example.canvaslearningassistant.dto.GraphSessionData;
 import org.example.canvaslearningassistant.entity.GraphEdge;
 import org.example.canvaslearningassistant.entity.StudentKnowledge;
-import org.example.canvaslearningassistant.services.KnowledgeGraphService;
-import org.example.canvaslearningassistant.services.MasteryService;
-import org.example.canvaslearningassistant.services.QuizSyncService;
-import org.example.canvaslearningassistant.services.api.CanvasApiService;
-import org.example.canvaslearningassistant.services.api.KnowledgeGraphApiService;
+import org.example.canvaslearningassistant.services.api.interfaces.CanvasApiService;
+import org.example.canvaslearningassistant.services.api.interfaces.KnowledgeGraphApiService;
+import org.example.canvaslearningassistant.services.interfaces.KnowledgeGraphService;
+import org.example.canvaslearningassistant.services.interfaces.MasteryService;
+import org.example.canvaslearningassistant.services.interfaces.QuizSyncService;
 import org.example.canvaslearningassistant.utils.IdTokenClaimsUtils;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -132,6 +132,7 @@ public class LtiController {
             }
 
             quizSyncService.syncAllStudentResults(data.courseId(), data.userId(), accessToken);
+            return ResponseEntity.ok("Sync completed");
         } catch (Exception ex) {
             log.error("Sync results failed", ex);
 
@@ -170,12 +171,58 @@ public class LtiController {
                     masteryService.getStudentKnowledge(data.userId());
 
             String response =
-                    knowledgeGraphApiService.ask(userMessage, studentKnowledges, data.graph());
+                    knowledgeGraphApiService.ask(userMessage, studentKnowledges);
 
             return ResponseEntity.ok(Map.of("response", response));
 
         } catch (Exception e) {
             log.error("Chat error", e);
+
+            return ResponseEntity
+                    .status(500)
+                    .body(Map.of("error", "Internal server error"));
+        }
+    }
+
+    @PostMapping("/chat-graph")
+    @ResponseBody
+    public ResponseEntity<Map<String, String>> chatWithGraph(
+            @RequestBody Map<String, String> body,
+            HttpSession session) {
+
+        try {
+            GraphSessionData data =
+                    (GraphSessionData) session.getAttribute("graph_session_data");
+
+            if (data == null) {
+                return ResponseEntity
+                        .badRequest()
+                        .body(Map.of("error", "Missing graph session data"));
+            }
+
+            String userMessage = body.get("message");
+
+            if (userMessage == null || userMessage.isBlank()) {
+                return ResponseEntity
+                        .badRequest()
+                        .body(Map.of("error", "Message is empty"));
+            }
+
+            List<StudentKnowledge> studentKnowledges =
+                    masteryService.getStudentKnowledge(data.userId());
+
+            // ✅ GRAPH VERSION CALL
+            String response =
+                    knowledgeGraphApiService.askWithGraph(
+                            userMessage,
+                            studentKnowledges,
+                            data.graph()
+                    );
+
+            return ResponseEntity.ok(Map.of("response", response));
+
+        } catch (Exception e) {
+            log.error("Chat graph error", e);
 
             return ResponseEntity
                     .status(500)

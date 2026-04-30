@@ -12,11 +12,11 @@ import java.util.List;
 @AllArgsConstructor
 public class CanvasQuizSubmissionModel {
 
-    private Integer submissionId;     // Canvas submission ID
-    private Integer quizId;           // Canvas quiz ID (assignmentId)
-    private Integer studentId;        // Canvas user ID
-    private Integer attempt;          // attempt number
+    private Integer submissionId;
+    private Integer quizId;
+    private Integer studentId;
+    private Integer attempt;
     private OffsetDateTime submittedAt;
 
-    private List<CanvasQuizSubmissionQuestionModel> answers; // list of answers
+    private List<CanvasQuizSubmissionQuestionModel> answers;
 }

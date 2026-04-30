@@ -8,7 +8,8 @@ import org.example.canvaslearningassistant.repository.CanvasQuizQuestionAnswerRe
 import org.example.canvaslearningassistant.repository.CanvasQuizQuestionRepository;
 import org.example.canvaslearningassistant.repository.CanvasQuizRepository;
 import org.example.canvaslearningassistant.repository.CanvasQuizSubmissionRepository;
-import org.example.canvaslearningassistant.services.api.CanvasApiService;
+import org.example.canvaslearningassistant.services.api.interfaces.CanvasApiService;
+import org.example.canvaslearningassistant.services.interfaces.MasteryService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,7 +22,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class QuizSyncService {
+public class QuizSyncServiceImpl implements org.example.canvaslearningassistant.services.interfaces.QuizSyncService {
 
     private final CanvasApiService canvasApiService;
     private final MasteryService masteryService;
@@ -33,35 +34,30 @@ public class QuizSyncService {
     private final CanvasQuizQuestionAnswerRepository quizQuestionAnswerRepository;
 
     @Transactional
+    @Override
     public void syncAllStudentResults(Integer courseId, Integer studentId, String accessToken) {
-        // 1. Fetch all distinct quiz IDs from stored questions
         List<CanvasQuiz> allQuizes = canvasQuizRepository.getAllByStudentId(studentId);
         List<Integer> allQuizIds = allQuizes.stream().map(CanvasQuiz::getId).toList();
 
-        // 2. For each quiz, fetch submission directly for this student
         allQuizIds.stream()
                 .distinct()
                 .forEach(quizId -> {
 
-                    // 2a. Skip if this student already has a submission stored
                     boolean attemptExists = quizSubmissionRepository.findByStudentId(studentId)
                             .stream()
                             .anyMatch(a -> a.getQuiz().getId() != null && a.getQuiz().getId().equals(quizId));
 
                     if (attemptExists) return;
 
-                    // 2b. Fetch submission from Canvas API (returns model)
                     CanvasQuizSubmissionModel submissionModel = canvasApiService
                             .getSubmissionFromHistoryModel(courseId, quizId, studentId, accessToken);
 
                     if (submissionModel == null) return;
 
-                    // 3. Map model to entity
                     // TODO: change exception
                     CanvasQuiz quiz = allQuizes.stream().filter(x -> Objects.equals(x.getId(), quizId)).findFirst().orElseThrow(() -> new RuntimeException("Quiz not found"));
                     CanvasQuizSubmission submissionEntity = mapModelToEntity(submissionModel, quiz);
 
-                    // 4. Save submission along with answers (cascade)
                     quizSubmissionRepository.save(submissionEntity);
 
                     log.info("Saved submission {} for student {}", submissionEntity.getId(), studentId);
@@ -72,10 +68,8 @@ public class QuizSyncService {
         masteryService.calculateStudentMastery(studentId);
     }
 
-    /**
-     * Map CanvasQuizSubmissionModel -> CanvasQuizSubmission entity
-     */
-    private CanvasQuizSubmission mapModelToEntity(CanvasQuizSubmissionModel model, CanvasQuiz quiz) {
+    @Override
+    public CanvasQuizSubmission mapModelToEntity(CanvasQuizSubmissionModel model, CanvasQuiz quiz) {
         CanvasQuizSubmission entity = new CanvasQuizSubmission();
         entity.setId(model.getSubmissionId());
         entity.setQuiz(quiz);

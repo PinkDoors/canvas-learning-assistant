@@ -7,6 +7,7 @@ import org.example.canvaslearningassistant.entity.quiz.canvas.*;
 import org.example.canvaslearningassistant.model.CanvasQuizSubmissionQuestionModel;
 import org.example.canvaslearningassistant.model.CanvasQuizSubmissionModel;
 import org.example.canvaslearningassistant.model.NewQuizQuestionData;
+import org.example.canvaslearningassistant.services.api.interfaces.CanvasApiService;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,13 +21,14 @@ import org.jsoup.Jsoup;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class CanvasApiService {
+public class CanvasApiServiceImpl implements CanvasApiService {
 
     private final ExternalApiConfiguration externalApiConfiguration;
     private final RestTemplate restTemplate = new RestTemplate();
 
     private static final String URL_BASE = "/api/v1/courses/";
 
+    @Override
     public Optional<Integer> getCourseId(String ltiContextId, String accessToken) {
         String url = externalApiConfiguration.getCanvasApiHost() + URL_BASE + "lti_context_id:" + ltiContextId;
 
@@ -51,6 +53,7 @@ public class CanvasApiService {
         }
     }
 
+    @Override
     public String getFrontPageContent(Integer courseId, String accessToken) {
         String url = externalApiConfiguration.getCanvasApiHost() + URL_BASE + courseId + "/front_page";
 
@@ -76,10 +79,11 @@ public class CanvasApiService {
         }
     }
 
+    @Override
     public CanvasQuiz createQuiz(Integer courseId,
-                                           String title,
-                                           String description,
-                                           String accessToken) {
+                                 String title,
+                                 String description,
+                                 String accessToken) {
 
         String url = externalApiConfiguration.getCanvasApiHost()
                 + URL_BASE + courseId + "/quizzes";
@@ -116,14 +120,15 @@ public class CanvasApiService {
             canvasQuiz.setId(id);
             return canvasQuiz;
         } else {
-            // TODO: exception
+            // TODO: change exception
             throw new RuntimeException();
         }
     }
 
+    @Override
     public void publishQuiz(Integer courseId,
-                               Integer quizId,
-                               String accessToken) {
+                            Integer quizId,
+                            String accessToken) {
 
         String url = externalApiConfiguration.getCanvasApiHost()
                 + URL_BASE + courseId + "/quizzes/" + quizId;
@@ -142,8 +147,7 @@ public class CanvasApiService {
 
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
 
-        ResponseEntity<Map> response;
-        response = restTemplate.exchange(
+        restTemplate.exchange(
                 url,
                 HttpMethod.PUT,
                 entity,
@@ -151,6 +155,7 @@ public class CanvasApiService {
         );
     }
 
+    @Override
     public void assignQuizToStudent(Integer courseId,
                                     Integer quizId,
                                     Integer studentId,
@@ -180,6 +185,7 @@ public class CanvasApiService {
         );
     }
 
+    @Override
     public CanvasQuizQuestion addQuizQuestion(Integer courseId,
                                               Integer quizId,
                                               NewQuizQuestionData quizQuestion,
@@ -194,7 +200,6 @@ public class CanvasApiService {
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setAccept(List.of(MediaType.APPLICATION_JSON));
 
-        // Build answers array for Canvas API
         List<Map<String, Object>> answersList = new ArrayList<>();
         List<String> optionsList = quizQuestion.getOptions();
 
@@ -227,14 +232,12 @@ public class CanvasApiService {
             throw new RuntimeException("Failed to create question: response body is null");
         }
 
-        // Map API response to CanvasQuizQuestion entity
         CanvasQuizQuestion canvasQuestion = new CanvasQuizQuestion();
         canvasQuestion.setId((Integer) responseBody.get("id"));
         canvasQuestion.setQuestionName((String) responseBody.get("question_name"));
         canvasQuestion.setQuestionText((String) responseBody.get("question_text"));
         canvasQuestion.setQuestionType((String) responseBody.get("question_type"));
 
-        // Map answers if present
         List<Map<String, Object>> returnedAnswers = (List<Map<String, Object>>) responseBody.get("answers");
         List<CanvasQuizQuestionAnswer> answers = new ArrayList<>();
         if (returnedAnswers != null) {
@@ -253,6 +256,7 @@ public class CanvasApiService {
     }
 
     @Transactional
+    @Override
     public CanvasQuizSubmissionModel getSubmissionFromHistoryModel(
             Integer courseId,
             Integer assignmentId,
@@ -294,7 +298,6 @@ public class CanvasApiService {
                 List<Integer> answersForQuestion = new ArrayList<>();
 
                 CanvasQuizSubmissionQuestionModel answer = new CanvasQuizSubmissionQuestionModel();
-                // handle single and multiple choice answers
                 if (entry.containsKey("answer_id")) {
                     answer.setQuestionId((Integer) entry.get("question_id"));
                     answersForQuestion.add((Integer) entry.get("answer_id"));

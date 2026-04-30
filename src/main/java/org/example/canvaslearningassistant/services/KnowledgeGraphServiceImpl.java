@@ -11,8 +11,8 @@ import org.example.canvaslearningassistant.exception.QuizGenerationException;
 import org.example.canvaslearningassistant.repository.CanvasQuizRepository;
 import org.example.canvaslearningassistant.repository.ConceptRepository;
 import org.example.canvaslearningassistant.repository.GraphEdgeRepository;
-import org.example.canvaslearningassistant.services.api.CanvasApiService;
-import org.example.canvaslearningassistant.services.api.KnowledgeGraphApiService;
+import org.example.canvaslearningassistant.services.api.KnowledgeGraphApiServiceImpl;
+import org.example.canvaslearningassistant.services.api.interfaces.CanvasApiService;
 import org.example.canvaslearningassistant.services.api.interfaces.QuizApiService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,19 +29,19 @@ import java.util.stream.Stream;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class KnowledgeGraphService {
+public class KnowledgeGraphServiceImpl implements org.example.canvaslearningassistant.services.interfaces.KnowledgeGraphService {
 
     private final QuizApiService quizApiService;
     private final CanvasApiService canvasApiService;
-    private final KnowledgeGraphApiService knowledgeGraphApiService;
+    private final KnowledgeGraphApiServiceImpl knowledgeGraphApiService;
     private final GraphEdgeRepository graphEdgeRepository;
     private final CanvasQuizRepository canvasQuizRepository;
     private final ConceptRepository conceptRepository;
 
     @Transactional
+    @Override
     public List<GraphEdge> getGraph(Integer courseId, String accessToken) {
 
-        // 1. Check if graph exists
         List<GraphEdge> existingGraph = graphEdgeRepository.findByCourseId(courseId);
         if (!existingGraph.isEmpty()) {
             log.info("Found existing graph in PostgreSQL for course {}", courseId);
@@ -58,18 +58,15 @@ public class KnowledgeGraphService {
             return List.of();
         }
 
-        // 2. Collect all unique concept names
         Set<String> conceptNames = graphEdges.stream()
                 .flatMap(dto -> Stream.of(dto.getFirstNode(), dto.getSecondNode()))
                 .collect(Collectors.toSet());
 
-        // 3. Load existing concepts in ONE query
         List<Concept> existingConcepts = conceptRepository.findByNameIn(new ArrayList<>(conceptNames));
 
         Map<String, Concept> conceptMap = existingConcepts.stream()
                 .collect(Collectors.toMap(Concept::getName, c -> c));
 
-        // 4. Create missing concepts
         List<Concept> newConcepts = conceptNames.stream()
                 .filter(name -> !conceptMap.containsKey(name))
                 .map(name -> {
@@ -84,7 +81,6 @@ public class KnowledgeGraphService {
             newConcepts.forEach(c -> conceptMap.put(c.getName(), c));
         }
 
-        // 5. Build GraphEdge entities using managed Concept objects
         List<GraphEdge> entities = graphEdges.stream()
                 .map(dto -> {
                     var newGraphEdge = new GraphEdge();
@@ -96,7 +92,6 @@ public class KnowledgeGraphService {
                 })
                 .toList();
 
-        // 6. Save all edges
         List<GraphEdge> savedEdges = graphEdgeRepository.saveAll(entities);
 
         log.info("Saved {} new edges and {} concepts for course {}",
@@ -109,6 +104,7 @@ public class KnowledgeGraphService {
     }
 
     @Transactional
+    @Override
     public void updateStudentKnowledge(List<GraphEdge> graphEdges, Integer courseId, Integer studentId, String accessToken) throws QuizGenerationException {
         String quizTitle = "Knowledge Check Quiz - " +
                 LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));

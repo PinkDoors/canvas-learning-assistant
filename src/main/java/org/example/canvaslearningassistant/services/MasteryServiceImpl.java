@@ -17,12 +17,13 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class MasteryService {
+public class MasteryServiceImpl implements org.example.canvaslearningassistant.services.interfaces.MasteryService {
 
     private final CanvasQuizSubmissionRepository submissionRepository;
     private final StudentKnowledgeRepository knowledgeRepository;
 
     @Transactional
+    @Override
     public void calculateStudentMastery(Integer studentId) {
 
         log.info("Calculating mastery for student {}", studentId);
@@ -34,7 +35,6 @@ public class MasteryService {
             return;
         }
 
-        // Clear previous mastery
         knowledgeRepository.deleteByStudentId(studentId);
 
         Map<Concept, int[]> conceptScores = new HashMap<>(); // concept → [earned, total]
@@ -47,20 +47,17 @@ public class MasteryService {
 
                 Concept concept = question.getConcept();
                 int earned = 0;
-                int total = 1; // each question counts as 1
+                int total = 1;
 
-                // Get all correct answers
                 Set<Integer> correctAnswerIds = question.getAnswers().stream()
                         .filter(a -> a.getWeight() != null && a.getWeight() == 100)
                         .map(a -> a.getId().getAnswerId())
                         .collect(Collectors.toSet());
 
-                // Get selected answer IDs
                 Set<Integer> selectedAnswerIds = questionResponse.getSelectedAnswers().stream()
                         .map(a -> a.getId().getAnswerId())
                         .collect(Collectors.toSet());
 
-                // ✅ For multiple-choice: student must select ALL correct answers, and NO wrong ones
                 if (!correctAnswerIds.isEmpty() && selectedAnswerIds.equals(correctAnswerIds)) {
                     earned = 1;
                 }
@@ -71,7 +68,6 @@ public class MasteryService {
             }
         }
 
-        // Save mastery
         List<StudentKnowledge> knowledgeList = new ArrayList<>();
         for (Map.Entry<Concept, int[]> entry : conceptScores.entrySet()) {
             Concept concept = entry.getKey();
@@ -92,6 +88,7 @@ public class MasteryService {
     }
 
     @Transactional(readOnly = true)
+    @Override
     public List<StudentKnowledge> getStudentKnowledge(Integer studentId) {
         return knowledgeRepository.findByStudentId(studentId);
     }

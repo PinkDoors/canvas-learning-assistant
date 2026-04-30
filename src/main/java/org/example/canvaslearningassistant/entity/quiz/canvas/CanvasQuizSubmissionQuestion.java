@@ -16,12 +16,10 @@ public class CanvasQuizSubmissionQuestion {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // Question reference
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "question_id")
     private CanvasQuizQuestion question;
 
-    // ✅ Selected answers (many-to-many)
     @ManyToMany
     @JoinTable(
             name = "submission_question_selected_answers",
@@ -33,7 +31,6 @@ public class CanvasQuizSubmissionQuestion {
     )
     private List<CanvasQuizQuestionAnswer> selectedAnswers;
 
-    // Submission reference
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "submission_id")
     private CanvasQuizSubmission submission;

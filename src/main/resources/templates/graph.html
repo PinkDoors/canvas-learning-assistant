@@ -27,7 +27,7 @@
             margin-top: 20px;
         }
 
-        /* ✅ Loader spinner */
+        /* Loader */
         .loader {
             width: 16px;
             height: 16px;
@@ -55,6 +55,11 @@
 <button id="sendBtn" onclick="send()">Send</button>
 <span id="chatLoader" class="loader" style="display:none;"></span>
 
+<label style="margin-left:10px; font-size:14px;">
+    <input type="checkbox" id="useGraph">
+    Use graph
+</label>
+
 <pre id="output"></pre>
 
 <hr>
@@ -75,7 +80,7 @@
     </button>
 </form>
 
-<!-- ✅ SYNC BUTTON -->
+<!-- Sync button -->
 <button id="syncBtn" onclick="syncResults()" style="
     margin-bottom: 15px;
     margin-left: 10px;
@@ -95,56 +100,28 @@
 
 <script th:inline="javascript">
 
-    // =========================
-    // SYNC RESULTS (AJAX)
-    // =========================
-    function syncResults() {
-        const loader = document.getElementById("syncLoader");
-        const btn = document.getElementById("syncBtn");
-
-        loader.style.display = "inline-block";
-        btn.disabled = true;
-
-        fetch("/lti/sync-results", { method: "POST" })
-            .then(res => {
-                if (!res.ok) throw new Error("Request failed");
-                return res.text();
-            })
-            .then(() => {
-                loader.style.display = "none";
-                btn.disabled = false;
-
-                loadGraph();
-            })
-            .catch(err => {
-                loader.style.display = "none";
-                btn.disabled = false;
-                alert("Error: " + err.message);
-            });
-    }
-
-    // =========================
-    // CHAT (UPDATED WITH SPINNER)
-    // =========================
     const input = document.getElementById("input");
     const output = document.getElementById("output");
 
     function send() {
         const loader = document.getElementById("chatLoader");
         const btn = document.getElementById("sendBtn");
+        const useGraph = document.getElementById("useGraph").checked;
 
         loader.style.display = "inline-block";
         btn.disabled = true;
 
-        fetch("/lti/chat", {
+        const endpoint = useGraph ? "/lti/chat-graph" : "/lti/chat";
+
+        fetch(endpoint, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-                message: input.value,
+                message: input.value
             })
         })
             .then(r => {
-                if (!r.ok) throw new Error("Chat request failed");
+                if (!r.ok) throw new Error("Request failed");
                 return r.json();
             })
             .then(d => {
@@ -159,9 +136,30 @@
             });
     }
 
-    // =========================
-    // GRAPH STATE
-    // =========================
+    function syncResults() {
+        const loader = document.getElementById("syncLoader");
+        const btn = document.getElementById("syncBtn");
+
+        loader.style.display = "inline-block";
+        btn.disabled = true;
+
+        fetch("/lti/sync-results", { method: "POST" })
+            .then(res => {
+                if (!res.ok) throw new Error("Request failed");
+                return res.text();
+            })
+            .then(() => {
+                loadGraph();
+            })
+            .catch(err => {
+                alert("Error: " + err.message);
+            })
+            .finally(() => {
+                loader.style.display = "none";
+                btn.disabled = false;
+            });
+    }
+
     const nodeMap = new Map();
     const nodes = [];
     const edges = [];
@@ -223,7 +221,7 @@
                 }
             },
             edges: {
-                smooth: { enabled: false },
+                smooth: false,
                 font: { align: "horizontal" }
             },
             physics: { enabled: false },
@@ -238,7 +236,6 @@
 
             const edgesDS = data.edges;
 
-            // EDGE CLICK
             if (params.edges.length > 0) {
                 const edgeId = params.edges[0];
                 const edge = edgesDS.get(edgeId);
@@ -254,14 +251,12 @@
                 return;
             }
 
-            // NODE CLICK
             if (params.nodes.length > 0) {
                 const node = nodes.find(n => n.id === params.nodes[0]);
                 input.value = "Explain concept: " + node.label;
                 return;
             }
 
-            // EMPTY CLICK → CLEAR ALL
             edgesDS.update(
                 edgesDS.get().map(e => ({
                     id: e.id,
@@ -272,9 +267,6 @@
         });
     }
 
-    // =========================
-    // LOAD GRAPH
-    // =========================
     function loadGraph() {
         fetch("/lti/graph-data")
             .then(r => r.json())

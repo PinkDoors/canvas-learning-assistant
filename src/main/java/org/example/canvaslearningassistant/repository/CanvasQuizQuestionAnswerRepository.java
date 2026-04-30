@@ -9,6 +9,5 @@ import java.util.List;
 
 @Repository
 public interface CanvasQuizQuestionAnswerRepository extends JpaRepository<CanvasQuizQuestionAnswer, CanvasQuizQuestionAnswerId> {
-    // Optional: find all answers for a specific question
     List<CanvasQuizQuestionAnswer> findByQuestionId(Integer questionId);
 }

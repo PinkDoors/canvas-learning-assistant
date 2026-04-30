@@ -7,9 +7,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 public interface KnowledgeGraphService {
-    @Transactional
     List<GraphEdge> getGraph(Integer courseId, String accessToken);
 
-    @Transactional
     void updateStudentKnowledge(List<GraphEdge> graphEdges, Integer courseId, Integer studentId, String accessToken) throws QuizGenerationException;
 }
